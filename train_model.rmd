@@ -1,0 +1,89 @@
+---
+title: "Practical Machine Learning Course Project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Overview##
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants to predict whether they have performed barbell lifts correctly. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+##Acquiring Data##
+```{r}
+#the data include one set for training and testing (pml-training.csv) and one for final submission (pml-testing.csv)
+fileurl1<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(fileurl1,"pml-training.csv")
+fileurl2<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(fileurl2,"pml-testing.csv")
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+
+#explore the structure of data with the following
+#str(training,list.len=ncol(training))
+#str(testing,list.len=ncol(testing))
+#loading all necessary libraries
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(rattle)
+
+#set random seed fro reproduceability
+set.seed(22335)
+```
+
+##Partition of Data and Preprocessing##
+```{r}
+#partition the training data into two parts: 60% as training set, 40% as testing set
+in_train <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
+my_training <- training[in_train, ]
+my_testing <- training[-in_train, ]
+
+#we conduct some selection of predictors by removing the variables with near zero variance from training data set
+nzv_my_training<-nearZeroVar(my_training,saveMetrics = TRUE)
+my_training<-my_training[!nzv_my_training$nzv]
+
+#remove first six columns as they are user id and time related.
+my_training<-my_training[,-c(1:6)]
+#remove columns with over 80% NA values,beware too low a threshold might lead to loss of information and/or overfitting (for this dataset, all columns with NA values are at 100%, so they are all removed)
+temp <- my_training
+j<-0
+for(i in 1:length(my_training)) { 
+   if(sum(is.na(my_training[, i]))/nrow(my_training)>.8){
+      temp<-temp[,-(i-j)]
+      j=j+1
+   }
+}
+my_training<-temp
+rm(temp)
+#using the same set of predictors for testing data set
+my_testing<-my_testing[colnames(my_training)]
+#for submission data set, take only the variables in the training set (minus the last column which is the "classe" variable to be predicted)
+testing<-testing[colnames(my_training[,-length(my_training)])]
+```
+
+##First Model - Decision Tree##
+```{r}
+modFit1<-rpart(classe ~ .,data=my_training,method="class")
+fancyRpartPlot(modFit1)
+predictions1 <- predict(modFit1, my_testing, type = "class")
+confusionMatrix(predictions1, my_testing$classe)
+```
+
+##Second Model - Random Forest##
+```{r}
+modFit2 <- randomForest(classe ~. , data=my_training)
+predictions2 <- predict(modFit2, my_testing, type = "class")
+confusionMatrix(predictions2, my_testing$classe)
+#as can be seen, the random forest model is superior to the first model.
+```
+
+##Predicting activity class in the submission data set##
+```{r}
+#use the Second Model (Random Forest) to predict activity class in the submission data set
+test_predictions <- predict(modFit2, testing, type = "class")
+print(test_predictions)
+```
+
