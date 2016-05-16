@@ -77,7 +77,7 @@ confusionMatrix(predictions1, my_testing$classe)
 modFit2 <- randomForest(classe ~. , data=my_training)
 predictions2 <- predict(modFit2, my_testing, type = "class")
 confusionMatrix(predictions2, my_testing$classe)
-#as can be seen, the random forest model is superior to the first model.
+#as can be seen, the random forest model is superior to the first model. The expected out-of-sample error is (100-99.32 = 0.68)%.
 ```
 
 ##Predicting activity class in the submission data set##
