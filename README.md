@@ -1,1 +1,2 @@
-# Practical-Machine-Learning
+#please view .html files with https://rawgit.com/.....
+for example use this link to view the .html in this repo: https://rawgit.com/ianf2015/Practical-Machine-Learning/master/train_model.html
